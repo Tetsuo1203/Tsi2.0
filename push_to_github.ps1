@@ -4,9 +4,11 @@
 
 .DESCRIPTION
     Führt Schritt für Schritt aus, was zum Veröffentlichen nötig ist:
-      1. Autor-E-Mail auf die GitHub-Noreply-Adresse setzen (nur lokal für diesen Klon)
-      2. Remote "origin" einrichten
-      3. Push nach GitHub – die Anmeldung übernimmt der Git Credential Manager
+      1. Git und Repository prüfen
+      2. Autor-E-Mail lokal für diesen Klon setzen (nur mit -Amend wird zusätzlich
+         der letzte Commit umgeschrieben; standardmäßig bleibt die Historie unverändert)
+      3. Remote "origin" einrichten
+      4. Push nach GitHub – die Anmeldung übernimmt der Git Credential Manager
          (Browserfenster) oder ein Token, das Sie an der Eingabeaufforderung eingeben.
 
     Ihre globale Git-Konfiguration wird nicht verändert.
@@ -14,13 +16,14 @@
 .EXAMPLE
     .\push_to_github.ps1
     .\push_to_github.ps1 -RepoUrl https://github.com/Tetsuo1203/Tsi2.0.git
+    .\push_to_github.ps1 -Amend      # letzten Commit auf die Noreply-Adresse umschreiben
 #>
 param(
     [string]$RepoUrl = "https://github.com/Tetsuo1203/Tsi2.0.git",
     [string]$Branch = "main",
     [string]$AuthorName = "Tetsuo1203",
     [string]$AuthorEmail = "146780181+Tetsuo1203@users.noreply.github.com",
-    [switch]$SkipAmend
+    [switch]$Amend
 )
 
 $ErrorActionPreference = "Stop"
@@ -59,7 +62,7 @@ try {
     }
     Write-Ok "$commitCount Commit(s) vorhanden"
 
-    if (-not $SkipAmend) {
+    if ($Amend) {
         $currentEmail = (git log -1 --format='%ae')
         if ($currentEmail -ne $AuthorEmail) {
             Write-Step "Letzten Commit auf die GitHub-Adresse umschreiben"
@@ -69,6 +72,9 @@ try {
         } else {
             Write-Ok "Autor stimmt bereits"
         }
+    } else {
+        Write-Ok "Autor des letzten Commits: $(git log -1 --format='%ae')"
+        Write-Host "    (Umschreiben nur mit -Amend – standardmäßig wird nichts verändert)" -ForegroundColor DarkGray
     }
 
     # -------------------------------------------------------------- Remote
