@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Editor / System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporäres
+*.log
+*.tmp
+*.bak
+
+# Lokale Sicherungen
+*.orig
+*.rej
+
+# Nebenprodukt beim Ausführen der Quellskripte
+tool_src/data/

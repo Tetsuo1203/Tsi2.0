@@ -1,0 +1,116 @@
+{
+ "instruments": {
+  "IWDA.AS": {
+   "symbol": "IWDA.AS",
+   "name": "iShares Core MSCI World UCITS ETF USD (Acc)",
+   "currency": "EUR",
+   "source": "yahoo",
+   "rows": 4377,
+   "first": "2009-09-25",
+   "last": "2026-11-02",
+   "meta": {
+    "exchange": "Amsterdam",
+    "type": "ETF",
+    "timezone": "Europe/Amsterdam",
+    "fetched": "2026-11-02T21:06:13"
+   },
+   "updated": "2026-11-02T21:06:13"
+  },
+  "^GSPC": {
+   "symbol": "^GSPC",
+   "name": "S&P 500",
+   "currency": "USD",
+   "source": "yahoo",
+   "rows": 14331,
+   "first": "1970-01-02",
+   "last": "2026-11-02",
+   "meta": {
+    "exchange": "SNP",
+    "type": "INDEX",
+    "timezone": "America/New_York",
+    "fetched": "2026-11-02T21:06:14"
+   },
+   "updated": "2026-11-02T21:06:14"
+  },
+  "EXS1.DE": {
+   "symbol": "EXS1.DE",
+   "name": "iShares Core DAX UCITS ETF (DE) EUR (Acc)",
+   "currency": "EUR",
+   "source": "yahoo",
+   "rows": 4783,
+   "first": "2008-01-02",
+   "last": "2026-11-02",
+   "meta": {
+    "exchange": "XETRA",
+    "type": "ETF",
+    "timezone": "Europe/Berlin",
+    "fetched": "2026-11-02T21:06:15"
+   },
+   "updated": "2026-11-02T21:06:15"
+  },
+  "^GDAXI": {
+   "symbol": "^GDAXI",
+   "name": "DAX P",
+   "currency": "EUR",
+   "source": "yahoo",
+   "rows": 9823,
+   "first": "1987-12-30",
+   "last": "2026-11-02",
+   "meta": {
+    "exchange": "XETRA",
+    "type": "INDEX",
+    "timezone": "Europe/Berlin",
+    "fetched": "2026-11-02T21:06:16"
+   },
+   "updated": "2026-11-02T21:06:16"
+  },
+  "VUKG.DE": {
+   "symbol": "VUKG.DE",
+   "name": "Vanguard FTSE 100 UCITS ETF GBP Accumulation",
+   "currency": "EUR",
+   "source": "yahoo",
+   "rows": 1895,
+   "first": "2019-05-14",
+   "last": "2026-11-02",
+   "meta": {
+    "exchange": "XETRA",
+    "type": "ETF",
+    "timezone": "Europe/Berlin",
+    "fetched": "2026-11-02T21:59:57"
+   },
+   "updated": "2026-11-02T21:59:57"
+  },
+  "DBPE.DE": {
+   "symbol": "DBPE.DE",
+   "name": "Xtrackers LevDAX Daily Swap UCITS ETF 1C",
+   "currency": "EUR",
+   "source": "yahoo",
+   "rows": 4223,
+   "first": "2010-03-18",
+   "last": "2026-11-02",
+   "meta": {
+    "exchange": "XETRA",
+    "type": "ETF",
+    "timezone": "Europe/Berlin",
+    "fetched": "2026-11-02T22:01:55"
+   },
+   "updated": "2026-11-02T22:01:55"
+  },
+  "SXR8.DE": {
+   "symbol": "SXR8.DE",
+   "name": "iShares Core S&P 500 UCITS ETF USD (Acc)",
+   "currency": "EUR",
+   "source": "yahoo",
+   "rows": 4181,
+   "first": "2010-05-19",
+   "last": "2026-11-02",
+   "meta": {
+    "exchange": "XETRA",
+    "type": "ETF",
+    "timezone": "Europe/Berlin",
+    "fetched": "2026-11-02T22:14:29"
+   },
+   "updated": "2026-11-02T22:14:29"
+  }
+ }
+}

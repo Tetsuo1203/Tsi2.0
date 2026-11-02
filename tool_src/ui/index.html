@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ETF-Timing-Studio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="boot" class="boot">
+  <div class="boot-logo">ETF-Timing-Studio</div>
+  <div class="boot-msg" id="bootMsg">Lade Daten …</div>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 64 64" class="brand-ico" aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#0e1a2b"/>
+      <path d="M9 46 L23 30 L33 38 L55 13" stroke="#22d3ee" stroke-width="5" fill="none"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="55" cy="13" r="5" fill="#f59e0b"/>
+    </svg>
+    <div>
+      <div class="brand-name">ETF-Timing-Studio</div>
+      <div class="brand-sub">Trendfolge-Analyse für Aktien &amp; ETFs · Nachbau von ETF_Simulation.xlsm</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div id="statusPill" class="pill">bereit</div>
+    <button class="btn ghost" id="btnExport" title="Ergebnis als CSV speichern">Export CSV</button>
+    <button class="btn ghost" id="btnShutdown" title="Server beenden">Beenden</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <section class="panel">
+      <label class="lbl" for="presetSel">Strategie-Vorlage</label>
+      <select id="presetSel" class="inp"></select>
+      <div class="hint" id="presetHint"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">Instrumente</div>
+      <div class="field">
+        <label class="lbl" for="riskSym">Risiko-Anlage (ETF/Aktie/Index)</label>
+        <div class="row">
+          <input id="riskSym" class="inp" list="cachedList" placeholder="z. B. IWDA.AS">
+          <button class="btn icon" data-search="riskSym" title="Instrument suchen">⌕</button>
+        </div>
+        <div class="hint" id="riskName"></div>
+      </div>
+      <div class="field">
+        <label class="lbl" for="signalSym">Signalgeber (Index für die Ampel)</label>
+        <div class="row">
+          <input id="signalSym" class="inp" list="cachedList" placeholder="z. B. ^GSPC">
+          <button class="btn icon" data-search="signalSym" title="Instrument suchen">⌕</button>
+        </div>
+        <div class="hint" id="signalName"></div>
+      </div>
+      <div class="field">
+        <label class="lbl" for="defMode">Defensiv-Anlage bei Rot</label>
+        <select id="defMode" class="inp">
+          <option value="cash">Kasse (verzinst)</option>
+          <option value="etf">Defensiver ETF</option>
+        </select>
+        <div class="row" id="defRow" style="display:none">
+          <input id="defSym" class="inp" list="cachedList" placeholder="z. B. IUAG.L">
+          <button class="btn icon" data-search="defSym" title="Instrument suchen">⌕</button>
+        </div>
+      </div>
+      <datalist id="cachedList"></datalist>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">Signal</div>
+      <label class="lbl" for="signalType">Signaltyp</label>
+      <select id="signalType" class="inp"></select>
+      <div id="paramsAmpel" class="params">
+        <div class="grid2">
+          <div><label class="lbl">RSL-Tage</label><input id="pSma" class="inp num" type="number" min="5" max="600"></div>
+          <div><label class="lbl">Obergrenze</label><input id="pUpper" class="inp num" type="number" step="0.01"></div>
+          <div><label class="lbl">Untergrenze</label><input id="pLower" class="inp num" type="number" step="0.01"></div>
+          <div><label class="lbl">Wechseltage rot</label><input id="pDaysRed" class="inp num" type="number" min="1" max="80"></div>
+          <div><label class="lbl">Wechseltage grün</label><input id="pDaysGreen" class="inp num" type="number" min="1" max="80"></div>
+        </div>
+        <div class="hint">Original: 130 Tage · 1,05 / 0,92 · 19 / 16 Tage Hysterese.</div>
+      </div>
+      <div id="paramsSma" class="params" style="display:none">
+        <div class="grid2">
+          <div><label class="lbl">SMA-Tage</label><input id="pSma2" class="inp num" type="number" min="5" max="600"></div>
+          <div><label class="lbl">Hysterese ±</label><input id="pBand" class="inp num" type="number" step="0.005"></div>
+        </div>
+      </div>
+      <div id="paramsDual" class="params" style="display:none">
+        <div class="grid2">
+          <div><label class="lbl">kurzer SMA</label><input id="pSmaShort" class="inp num" type="number" min="2" max="300"></div>
+          <div><label class="lbl">langer SMA</label><input id="pSmaLong" class="inp num" type="number" min="10" max="600"></div>
+        </div>
+      </div>
+      <div id="paramsMom" class="params" style="display:none">
+        <div class="grid2">
+          <div><label class="lbl">Momentum-Tage</label><input id="pMom" class="inp num" type="number" min="5" max="700"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">Ausführung &amp; Kosten</div>
+      <div class="grid2">
+        <div><label class="lbl">Startkapital €</label><input id="capital" class="inp num" type="number" step="1000"></div>
+        <div><label class="lbl">Ordergebühr €</label><input id="feeFixed" class="inp num" type="number" step="0.1"></div>
+        <div><label class="lbl">Gebühr %</label><input id="feePct" class="inp num" type="number" step="0.05"></div>
+        <div><label class="lbl">Slippage bp</label><input id="slippage" class="inp num" type="number" step="1"></div>
+        <div><label class="lbl">Steuersatz %</label><input id="taxRate" class="inp num" type="number" step="0.1"></div>
+        <div><label class="lbl">Kasse-Zins % p.a.</label><input id="cashRate" class="inp num" type="number" step="0.1"></div>
+      </div>
+      <div class="field">
+        <label class="lbl" for="execLag">Ausführung</label>
+        <select id="execLag" class="inp">
+          <option value="1">nächster Schlusskurs (realistisch)</option>
+          <option value="0">gleicher Schlusskurs (wie Original, optimistisch)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lbl" for="taxMode">Steuer</label>
+        <select id="taxMode" class="inp">
+          <option value="accrued">anteilig (Wert nach Steuern, wie Original)</option>
+          <option value="realized">nur bei Verkauf</option>
+          <option value="none">keine Steuer</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="grid2">
+          <div><label class="lbl">Startdatum</label><input id="startDate" class="inp" type="date"></div>
+          <div><label class="lbl">Enddatum</label><input id="endDate" class="inp" type="date"></div>
+        </div>
+        <div class="hint">Leer = gesamter verfügbarer Zeitraum.</div>
+      </div>
+    </section>
+
+    <section class="panel actions">
+      <button class="btn primary big" id="btnRun">Analyse starten</button>
+      <div class="grid2">
+        <button class="btn" id="btnGrid" title="Parameter durchtesten">Parameter-Suche</button>
+        <button class="btn" id="btnWf" title="Walk-Forward-Test">Walk-Forward</button>
+      </div>
+    </section>
+  </aside>
+
+  <section class="content">
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="overview">Übersicht</button>
+      <button class="tab" data-view="signals">Signale</button>
+      <button class="tab" data-view="periods">Jahre &amp; Monate</button>
+      <button class="tab" data-view="trades">Trades</button>
+      <button class="tab" data-view="compare">Vergleich</button>
+      <button class="tab" data-view="params">Parameter</button>
+      <button class="tab" data-view="robust">Robustheit</button>
+      <button class="tab" data-view="data">Daten</button>
+    </nav>
+
+    <div class="views">
+      <div class="view active" id="view-overview">
+        <div id="kpiRow" class="kpi-row"></div>
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <div class="panel-title">Vermögensverlauf</div>
+            <div class="panel-tools">
+              <label class="chk"><input type="checkbox" id="logScale"> logarithmisch</label>
+              <span class="legend" id="legendEquity"></span>
+            </div>
+          </div>
+          <div id="chartEquity" class="chart"></div>
+          <div id="ribbonEquity" class="ribbon"></div>
+        </div>
+        <div class="two">
+          <div class="panel chart-panel">
+            <div class="panel-head"><div class="panel-title">Drawdown</div></div>
+            <div id="chartDD" class="chart small"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title">Größte Verlustphasen</div></div>
+            <div id="ddList" class="dd-list"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Kennzahlen im Vergleich</div>
+            <div class="panel-tools muted" id="metaLine"></div>
+          </div>
+          <div id="metricsTable" class="table-wrap"></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-signals">
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <div class="panel-title" id="sigTitle">Signalgeber mit gleitendem Durchschnitt</div>
+            <div class="panel-tools"><span class="legend" id="legendSignal"></span></div>
+          </div>
+          <div id="chartSignal" class="chart"></div>
+        </div>
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <div class="panel-title">Abstand zum Durchschnitt (RSL) und Schwellen</div>
+          </div>
+          <div id="chartRatio" class="chart small"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Aktueller Signalzustand</div></div>
+          <div id="signalNow" class="signal-now"></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-periods">
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <div class="panel-title">Jahresrenditen</div>
+            <div class="panel-tools"><span class="legend" id="legendYear"></span></div>
+          </div>
+          <div id="chartYears" class="chart"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Monatsrenditen der Strategie</div></div>
+          <div id="heatMonths" class="heat"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Jahresübersicht</div></div>
+          <div id="yearTable" class="table-wrap"></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-trades">
+        <div id="tradeKpi" class="kpi-row small"></div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Alle Umschichtungen</div>
+            <div class="panel-tools">
+              <select id="tradeFilter" class="inp mini">
+                <option value="all">alle</option>
+                <option value="KAUF">nur Käufe</option>
+                <option value="VERKAUF">nur Verkäufe</option>
+              </select>
+            </div>
+          </div>
+          <div id="tradeTable" class="table-wrap tall"></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-compare">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Mehrere ETFs mit derselben Strategie vergleichen</div>
+            <div class="panel-tools">
+              <button class="btn" id="btnCompare">Vergleich starten</button>
+            </div>
+          </div>
+          <div class="hint">Wähle Instrumente aus dem Datenbestand (Mehrfachauswahl mit Strg).</div>
+          <select id="compareSel" class="inp multi" multiple size="5"></select>
+          <div id="compareOut" class="table-wrap"></div>
+          <div id="chartCompare" class="chart small"></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-params">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Parameter-Suche</div>
+            <div class="panel-tools muted">Ziel: Calmar-Ratio (Rendite je Risiko)</div>
+          </div>
+          <div id="gridSummary" class="hint">Noch keine Suche gestartet.</div>
+          <div id="chartGrid" class="chart small"></div>
+          <div id="gridTable" class="table-wrap tall"></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-robust">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Walk-Forward-Test (rollierende Optimierung)</div>
+            <div class="panel-tools">
+              <select id="wfObj" class="inp mini">
+                <option value="calmar">Ziel: Calmar</option>
+                <option value="cagr">Ziel: CAGR</option>
+                <option value="sharpe">Ziel: Sharpe</option>
+              </select>
+              <button class="btn" id="btnWf2">Start</button>
+            </div>
+          </div>
+          <div class="hint">Trainingsfenster 6 Jahre, Testfenster 2 Jahre. Die Testphasen ergeben zusammen
+            eine echte Out-of-Sample-Kurve.</div>
+          <div id="wfOut"></div>
+          <div id="chartWf" class="chart small"></div>
+          <div id="wfTable" class="table-wrap"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Monte-Carlo-Projektion (Bootstrapping der Tagesrenditen)</div>
+            <div class="panel-tools"><button class="btn" id="btnMc">Projektion starten</button></div>
+          </div>
+          <div id="chartMc" class="chart small"></div>
+          <div id="mcOut" class="hint"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Kosten-Sensitivität</div>
+            <div class="panel-tools"><button class="btn" id="btnSens">Berechnen</button></div>
+          </div>
+          <div id="sensOut" class="table-wrap"></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-data">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Datenbestand</div>
+            <div class="panel-tools"><button class="btn" id="btnRefreshData">Aktualisieren</button></div>
+          </div>
+          <div id="cachedTable" class="table-wrap tall"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Kurse von Yahoo Finance laden</div></div>
+          <div class="row">
+            <input id="dlInput" class="inp" placeholder="Symbole, getrennt durch Komma – z. B. IWDA.AS, ^GDAXI, EXS1.DE">
+            <button class="btn primary" id="btnDownload">Laden</button>
+          </div>
+          <div class="hint">Yahoo-Symbole: ETFs mit Börsenkürzel (IWDA.AS, EXS1.DE, SXR8.DE),
+            Indizes mit ^ (^GDAXI, ^GSPC, ^NDX).</div>
+          <div id="dlOut" class="hint"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">CSV importieren</div></div>
+          <div class="row">
+            <input id="impName" class="inp" placeholder="Name, z. B. MSCI World (ariva)">
+            <input id="impFile" type="file" accept=".csv,.txt" class="inp file">
+          </div>
+          <div class="hint">Funktioniert mit ariva.de, onvista, investing.com, Yahoo-CSV und eigenen
+            Dateien: Datum + Kurs werden automatisch erkannt (Semikolon/Komma/Tab).</div>
+          <div id="impOut" class="hint"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="searchModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="panel-title">Instrument suchen</div>
+      <button class="btn icon" id="searchClose">✕</button>
+    </div>
+    <input id="searchInput" class="inp" placeholder="Name oder Symbol – z. B. MSCI World, DAX, S&P 500">
+    <div id="searchResults" class="search-results"></div>
+    <div class="hint">Quelle: Yahoo-Finance-Suche. Klick übernimmt das Symbol und lädt die Daten.</div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay"><div class="spinner"></div><div id="overlayMsg">rechne …</div></div>
+<div id="toast" class="toast"></div>
+
+<script src="chart.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

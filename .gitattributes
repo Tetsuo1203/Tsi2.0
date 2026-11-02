@@ -1,0 +1,7 @@
+# Textdateien normalisieren, damit Diffs sauber bleiben
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.xlsm binary
