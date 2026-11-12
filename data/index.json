@@ -14,7 +14,12 @@
     "timezone": "Europe/Amsterdam",
     "fetched": "2026-11-02T21:06:13"
    },
-   "updated": "2026-11-02T21:06:13"
+   "updated": "2026-11-02T21:06:13",
+   "quality": {
+    "level": "info",
+    "n_warn": 0,
+    "n_info": 1
+   }
   },
   "^GSPC": {
    "symbol": "^GSPC",
@@ -30,7 +35,12 @@
     "timezone": "America/New_York",
     "fetched": "2026-11-02T21:06:14"
    },
-   "updated": "2026-11-02T21:06:14"
+   "updated": "2026-11-02T21:06:14",
+   "quality": {
+    "level": "info",
+    "n_warn": 0,
+    "n_info": 2
+   }
   },
   "EXS1.DE": {
    "symbol": "EXS1.DE",
@@ -46,7 +56,12 @@
     "timezone": "Europe/Berlin",
     "fetched": "2026-11-02T21:06:15"
    },
-   "updated": "2026-11-02T21:06:15"
+   "updated": "2026-11-02T21:06:15",
+   "quality": {
+    "level": "ok",
+    "n_warn": 0,
+    "n_info": 0
+   }
   },
   "^GDAXI": {
    "symbol": "^GDAXI",
@@ -62,7 +77,12 @@
     "timezone": "Europe/Berlin",
     "fetched": "2026-11-02T21:06:16"
    },
-   "updated": "2026-11-02T21:06:16"
+   "updated": "2026-11-02T21:06:16",
+   "quality": {
+    "level": "ok",
+    "n_warn": 0,
+    "n_info": 0
+   }
   },
   "VUKG.DE": {
    "symbol": "VUKG.DE",
@@ -78,7 +98,12 @@
     "timezone": "Europe/Berlin",
     "fetched": "2026-11-02T21:59:57"
    },
-   "updated": "2026-11-02T21:59:57"
+   "updated": "2026-11-02T21:59:57",
+   "quality": {
+    "level": "ok",
+    "n_warn": 0,
+    "n_info": 0
+   }
   },
   "DBPE.DE": {
    "symbol": "DBPE.DE",
@@ -94,7 +119,12 @@
     "timezone": "Europe/Berlin",
     "fetched": "2026-11-02T22:01:55"
    },
-   "updated": "2026-11-02T22:01:55"
+   "updated": "2026-11-02T22:01:55",
+   "quality": {
+    "level": "info",
+    "n_warn": 0,
+    "n_info": 2
+   }
   },
   "SXR8.DE": {
    "symbol": "SXR8.DE",
@@ -110,7 +140,75 @@
     "timezone": "Europe/Berlin",
     "fetched": "2026-11-02T22:14:29"
    },
-   "updated": "2026-11-02T22:14:29"
+   "updated": "2026-11-02T22:14:29",
+   "quality": {
+    "level": "warn",
+    "n_warn": 1,
+    "n_info": 8
+   }
+  },
+  "LVLN": {
+   "symbol": "LVLN",
+   "name": "State Street SPDR S&P Leveraged Ln ETF",
+   "currency": "USD",
+   "source": "yahoo",
+   "rows": 241,
+   "first": "2025-11-18",
+   "last": "2026-11-03",
+   "meta": {
+    "exchange": "NYSEArca",
+    "type": "ETF",
+    "timezone": "America/New_York",
+    "fetched": "2026-11-03T15:56:03"
+   },
+   "updated": "2026-11-03T15:56:03",
+   "quality": {
+    "level": "ok",
+    "n_warn": 0,
+    "n_info": 0
+   }
+  },
+  "BTC-EUR": {
+   "symbol": "BTC-EUR",
+   "name": "Bitcoin EUR",
+   "currency": "EUR",
+   "source": "yahoo",
+   "rows": 4432,
+   "first": "2014-09-17",
+   "last": "2026-11-04",
+   "meta": {
+    "exchange": "CCC",
+    "type": "CRYPTOCURRENCY",
+    "timezone": "UTC",
+    "fetched": "2026-11-04T10:01:14"
+   },
+   "quality": {
+    "level": "info",
+    "n_warn": 0,
+    "n_info": 2
+   },
+   "updated": "2026-11-04T10:01:14"
+  },
+  "^SP500TR": {
+   "symbol": "^SP500TR",
+   "name": "S&P 500 (TR)",
+   "currency": "USD",
+   "source": "yahoo",
+   "rows": 9783,
+   "first": "1988-01-04",
+   "last": "2026-11-03",
+   "meta": {
+    "exchange": "SNP",
+    "type": "INDEX",
+    "timezone": "America/New_York",
+    "fetched": "2026-11-04T10:16:28"
+   },
+   "quality": {
+    "level": "ok",
+    "n_warn": 0,
+    "n_info": 0
+   },
+   "updated": "2026-11-04T10:16:28"
   }
  }
 }

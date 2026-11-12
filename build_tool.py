@@ -1,4 +1,5 @@
 """Baut aus den Quellteilen die einzelne auslieferbare Datei ETF_Tool.py."""
+import ast
 import base64
 import os
 import re
@@ -17,6 +18,30 @@ def read(p):
 
 def strip_future(code):
     return re.sub(r"^from __future__ import annotations\s*$", "", code, flags=re.M)
+
+
+def top_level_names(code):
+    """Funktionen, Klassen und Variablen auf Modulebene (ohne Importe)."""
+    names = set()
+    for node in ast.parse(code).body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.Assign):
+            names.update(t.id for t in node.targets if isinstance(t, ast.Name))
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+    return names
+
+
+def check_name_conflicts(parts):
+    """Im Bundle teilen sich alle Teile einen Namensraum: doppelte Namen würden sich
+    stillschweigend überschreiben."""
+    seen = {}
+    for label, code in parts:
+        for name in sorted(top_level_names(code)):
+            if name in seen:
+                raise SystemExit(f"Namenskonflikt im Bundle: '{name}' in {seen[name]} und {label}")
+            seen[name] = label
 
 
 def build_ui() -> str:
@@ -40,6 +65,7 @@ def main():
     data = re.sub(r"^from engine import .*$", "", data, flags=re.M)
     server = re.sub(r"^import data as D\s*$", "", server, flags=re.M)
     server = re.sub(r"^import engine as E\s*$", "", server, flags=re.M)
+    check_name_conflicts((("engine.py", engine), ("data.py", data), ("server.py", server)))
 
     ui = build_ui()
     blob = base64.b64encode(zlib.compress(ui.encode("utf-8"), 9)).decode("ascii")
@@ -50,18 +76,21 @@ def main():
     header = '''#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ETF-Timing-Studio 1.0
+ETF-Timing-Studio 1.1
 =====================
 
-Ein eigenständiges Analyse-Werkzeug für Trendfolge-Strategien auf Aktien und ETFs.
-Nachbau und Erweiterung der Arbeitsmappe "ETF_Simulation.xlsm"
+Ein eigenständiges Analyse-Werkzeug für Trendfolge-Strategien auf Aktien, ETFs und
+Krypto (z. B. Bitcoin). Nachbau und Erweiterung der Arbeitsmappe "ETF_Simulation.xlsm"
 (RSL-Ampel: Kurs / gleitender Durchschnitt mit Hysterese, monatliche Rotation,
-Ordergebühren, Abgeltungssteuer).
+Ordergebühren, Abgeltungsteuer) – mit realistischem Steuermodell (Teilfreistellung,
+Sparerpauschbetrag, §23-Haltefrist), Risiko-/Benchmark-Kennzahlen, rollierenden
+Renditen, Walk-Forward, Monte-Carlo und Datenqualitäts-Prüfung.
 
 Start:      python ETF_Tool.py
 Optional:   python ETF_Tool.py --port 9000 --no-browser
             python ETF_Tool.py --selftest
-            python ETF_Tool.py --download IWDA.AS ^GDAXI EXS1.DE
+            python ETF_Tool.py --download IWDA.AS ^GDAXI BTC-EUR
+            python ETF_Tool.py --quality SXR8.DE
             python ETF_Tool.py --backtest '{"risk":"IWDA.AS","signal":"^GSPC"}'
 
 Benötigt nur Python 3.8+ mit Standardbibliothek – keine Installation von Paketen.

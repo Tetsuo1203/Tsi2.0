@@ -1,7 +1,8 @@
-# ETF-Timing-Studio
+# ETF-Timing-Studio 1.1
 
-Ein eigenständiges Analyse-Werkzeug für **Trendfolge-Strategien auf Aktien und
-ETFs** – Nachbau und Erweiterung der Arbeitsmappe `ETF_Simulation.xlsm`.
+Ein eigenständiges Analyse-Werkzeug für **Trendfolge-Strategien auf Aktien, ETFs,
+Indizes und Kryptowährungen wie Bitcoin** – Nachbau und Erweiterung der Arbeitsmappe
+`ETF_Simulation.xlsm`.
 
 Läuft auf jedem Rechner mit **Python 3.8+**, ohne Installation von Paketen,
 ohne Excel, ohne API-Key. Die Oberfläche öffnet sich im Browser, gerechnet wird
@@ -13,8 +14,9 @@ python ETF_Tool.py
 
 Windows: `Start_ETF_Tool.bat` doppelklicken.
 
-> **Ausführliche Bedienungsanleitung:** [Anleitung.md](Anleitung.md) – Schritt für
-> Schritt durch Oberfläche, Reiter, Parameter, Datenverwaltung und Fehlerbehebung.
+> **Ausführliche Bedienungsanleitung:** [Anleitung.md](Anleitung.md) – Oberfläche,
+> Reiter, Parameter, Steuern, Bitcoin, alle Kennzahlen mit Formeln, Validierung,
+> Datenpflege und Fehlerbehebung.
 
 ---
 
@@ -22,12 +24,14 @@ Windows: `Start_ETF_Tool.bat` doppelklicken.
 
 Es beantwortet die Frage, für die die Original-Arbeitsmappe gebaut wurde:
 
-> „Wann sollte ich in einen ETF investiert sein – und wann lieber nicht?“
+> „Wann sollte ich investiert sein – und wann lieber nicht?“
 
-Dazu wird eine **Signalregel** auf einen Index (z. B. S&P 500) gerechnet, die
-daraus **Risiko an / Risiko aus** ableitet, und diese Regel über Jahrzehnte
-historischer Kurse **simuliert**: mit Ordergebühren, Slippage, Abgeltungssteuer,
-Kassenverzinsung und einem ehrlichen Vergleich gegen Buy & Hold.
+Dazu wird eine **Signalregel** auf einen Index oder das Instrument selbst gerechnet,
+die daraus **Risiko an / Risiko aus** ableitet, und diese Regel über historische Kurse
+**simuliert**: mit Ordergebühren, Slippage, deutscher Steuer (Abgeltungsteuer mit
+Teilfreistellung, Sparerpauschbetrag und Verlusttopf bzw. §23-Haltefrist für Bitcoin
+und Gold-ETCs), Kassenverzinsung und einem fairen Vergleich gegen Buy & Hold, das mit
+exakt denselben Regeln gerechnet wird.
 
 ### Die Original-Strategie („RSL-Ampel“)
 
@@ -46,10 +50,10 @@ Ebenso die Kontoführung (Stückzahl, Anschaffungskosten, Wert nach Steuern):
 **0 Abweichungen** auf 598 geprüften Zeilen.
 
 Im Original wurde bei „grün“ ein **2-fach gehebelter DAX-ETF** (LevDAX) und bei
-„rot“ ein **Short-DAX-ETF** gehalten – Renditen um 47 % p. a. bei Drawdowns um
-47 %. Diese Produkte sind heute **geschlossen**. Das Tool bildet sie für den
-Vergleich **synthetisch** nach (Preset „Original-Nachbau“) und stellt sonst
-**real handelbare ETFs** in den Mittelpunkt.
+„rot“ ein **Short-DAX-ETF** gehalten. Diese Produkte sind heute **geschlossen**. Das
+Tool bildet sie für den Vergleich **synthetisch** nach (Preset „Original-Nachbau“) und
+stellt sonst **real handelbare** ETFs und Bitcoin in den Mittelpunkt. Weitere Signale:
+SMA-Trend (200-Tage-Linie), Golden Cross, Momentum.
 
 ---
 
@@ -57,15 +61,15 @@ Vergleich **synthetisch** nach (Preset „Original-Nachbau“) und stellt sonst
 
 1. **Starten** – `python ETF_Tool.py` (oder `Start_ETF_Tool.bat`). Der Browser
    öffnet `http://127.0.0.1:8765/`.
-2. **Daten laden** – Reiter „Daten“: Symbole eingeben (`IWDA.AS, ^GSPC,
-   EXS1.DE`) → „Laden“. Oder CSV importieren. Beim ersten Start kann auch
-   direkt „Standard-Daten laden“ geklickt werden.
+2. **Daten laden** – Reiter „Daten“: Symbole eingeben (`IWDA.AS, ^GSPC, BTC-EUR`) →
+   „Laden“, einen Eintrag der Schnellwahl anklicken oder CSV importieren. Beim ersten
+   Start genügt „Standard-Daten laden“.
 3. **Strategie wählen** – links eine Vorlage auswählen, z. B.
-   „RSL-Ampel · MSCI World (Kasse)“.
-4. **Analysieren** – „Analyse starten“.
+   „RSL-Ampel · MSCI World (Kasse)“ oder „Bitcoin · 200-Tage-SMA (Kasse)“.
+4. **Analysieren** – „Analyse starten“; Hinweisbox (Datenqualität, Vorlauf) beachten.
 5. **Ansehen** – Reiter „Übersicht“, „Signale“, „Jahre & Monate“, „Trades“.
-6. **Belastbarkeit prüfen** – „Parameter-Suche“, „Walk-Forward“,
-   „Monte-Carlo“, „Kosten-Sensitivität“.
+6. **Belastbarkeit prüfen** – „Parameter-Suche“, „Walk-Forward“, „Monte-Carlo“,
+   „Kosten-Sensitivität“.
 
 ---
 
@@ -73,14 +77,14 @@ Vergleich **synthetisch** nach (Preset „Original-Nachbau“) und stellt sonst
 
 | Reiter | Inhalt |
 |---|---|
-| **Übersicht** | Kennzahlenkarten, Vermögensverlauf (linear/log) gegen Buy & Hold, Drawdown-Verlauf, größte Verlustphasen, Kennzahlentabelle |
+| **Übersicht** | Hinweisbox, zehn Kennzahlenkarten, Vermögensverlauf (linear/log) gegen Buy & Hold, Drawdown-Verlauf, größte Verlustphasen mit Erholung, gruppierte Kennzahlentabelle mit Erklärungen |
 | **Signale** | Signalgeber mit gleitendem Durchschnitt und grün/rot hinterlegten Phasen, RSL-Verlauf mit Ober-/Untergrenze, aktueller Signalzustand |
-| **Jahre & Monate** | Jahresrenditen als Balken (Strategie vs. Buy & Hold), Monatsrenditen-Heatmap, Jahresübersicht |
-| **Trades** | alle Umschichtungen mit Kurs, Stück, Gebühr, Steuer, realisiertem Gewinn; Gewinnquote, Ø Haltedauer |
-| **Vergleich** | dieselbe Strategie auf mehreren ETFs, sortiert nach Rendite, mit Balkendiagramm |
-| **Parameter** | automatische Suche über RSL-Tage × Schwellen × Wechseltage, Heatmap der Calmar-Ratio, Rangliste, „übernehmen“ per Klick |
-| **Robustheit** | Walk-Forward (rollierende Optimierung, echte Out-of-Sample-Kurve), Monte-Carlo-Projektion, Kosten-Sensitivität |
-| **Daten** | Datenbestand verwalten, Yahoo-Download, CSV-Import |
+| **Jahre & Monate** | Jahresrenditen (Strategie vs. Buy & Hold), Monatsrenditen-Heatmap, **rollierende 1/3/5-Jahres-Renditen** mit „wie oft vorn / wie oft Verlust“, Jahresübersicht |
+| **Trades** | alle Orders mit Kurs, Stück, Gebühr, Steuer, Gewinn, Haltedauer; Gewinnquote, Profit-Faktor, Fehlsignale, Verlustserien |
+| **Vergleich** | dieselbe Strategie auf mehreren Instrumenten inkl. Calmar gegen Buy & Hold, Up/Down-Capture und Datenqualität |
+| **Parameter** | Suche über das volle Raster, Ziel wählbar (Calmar, Martin, Sharpe, CAGR), Heatmap, **Plateau-Anteil**, Rangliste, „übernehmen“ per Klick |
+| **Robustheit** | Walk-Forward (volles Raster, durchgehende Out-of-Sample-Simulation, Buy & Hold und feste Parameter als Referenz), Monte-Carlo (Block-Bootstrap, Verlust- und Outperformance-Wahrscheinlichkeit), Kosten-Sensitivität (inkl. 1 Tag Verzögerung) |
+| **Daten** | Datenbestand mit **Qualitätsprüfung**, Yahoo-Download, Schnellwahl, CSV-Import |
 
 ---
 
@@ -90,32 +94,35 @@ Vergleich **synthetisch** nach (Preset „Original-Nachbau“) und stellt sonst
 |---|---|---|
 | **CAGR p. a.** | durchschnittliche Jahresrendite (geometrisch) | mit Buy & Hold vergleichen, nicht isoliert |
 | **Max. Drawdown** | größter Verlust vom Hoch zum Tief | *die* Kennzahl für „hält man das durch?“ |
-| **Calmar** | CAGR / max. Drawdown | Risiko-Ertrag-Verhältnis; > 0,5 ist gut |
-| **Sharpe** | Rendite je Schwankungsrisiko | bei Trendfolge meist niedriger als Buy & Hold |
-| **Volatilität** | annualisierte Tagesschwankung | Timing senkt sie meist deutlich |
-| **Zeit im Markt** | Anteil der Tage mit Risikoanlage | niedrig = viel Kasse, viel Steuer- und Kostenträgheit |
-| **Kosten & Steuer** | Gebühren + anteilige Steuer | bei häufigem Umschichten der Renditefresser |
-| **Längste Unterwasserphase** | Tage unter dem alten Hoch | psychologisch entscheidend |
+| **Calmar** | CAGR / max. Drawdown | Risiko-Ertrag-Verhältnis; für Timing am wichtigsten |
+| **Ulcer-Index / Martin** | Tiefe und Dauer aller Verluste / Ertrag je Ulcer | robuster als nur der tiefste Verlust |
+| **Sharpe / Sortino** | Überrendite über Kasse-Zins je Schwankung / je Abwärtsschwankung | Standarddefinitionen mit risikolosem Zins |
+| **Up-/Down-Capture** | Anteil an den Gewinn-/Verlustmonaten von Buy & Hold | ideal: Up hoch, Down niedrig |
+| **Beta, Alpha, Tracking Error, Information Ratio** | Bezug zu Buy & Hold | Marktabhängigkeit und Mehrwert |
+| **VaR / CVaR 95 %** | schlechte bzw. sehr schlechte Tage | Tail-Risiko |
+| **Rollierende Renditen** | Ergebnis je Einstiegszeitpunkt über 1/3/5 Jahre | wie oft vorn, wie oft Verlust |
+| **Zeit im Risiko, Wechsel/Jahr, Fehlsignale** | Handelsverhalten | Kosten- und Steuertreiber |
+| **Kosten & Steuer** | Gebühren, gezahlte und latente Steuer | bei häufigem Umschichten der Renditefresser |
 
 **Der wichtigste Punkt:** Eine Timing-Strategie gewinnt selten an Rendite – sie
-gewinnt an **Drawdown** und **Glättung**. Wer nur auf CAGR schaut, wird fast
-immer Buy & Hold besser finden. Der ehrliche Vergleich ist
-„Rendite **pro** Verlust“ (Calmar, Sharpe) plus die Frage, ob man den
-Drawdown psychologisch ausgehalten hätte.
+gewinnt an **Drawdown** und **Glättung**. Der ehrliche Vergleich ist „Rendite **pro**
+Verlust“ (Calmar, Martin) plus die Frage, ob man den Drawdown ausgehalten hätte.
 
-### Beispiele aus diesem Tool (Stand der Daten: siehe Reiter „Daten“)
+### Beispiele (Daten bis 11/2026, Standardeinstellungen)
 
-| Strategie | Zeitraum | CAGR | Buy & Hold | Max. DD | DD Buy & Hold |
-|---|---|---|---|---|---|
-| RSL-Ampel, S&P 500 | 1970–2026 | 5,69 % | 7,47 % | −32,9 % | −55,6 % |
-| RSL-Ampel, DAX | 1988–2026 | 7,19 % | 7,91 % | −27,5 % | −69,6 % |
-| RSL-Ampel, DAX-ETF (EXS1) | 2008–2026 | 5,91 % | 4,62 % | −32,1 % | −54,3 % |
-| RSL-Ampel, MSCI World (IWDA) | 2009–2026 | 7,86 % | 10,92 % | −22,1 % | −30,6 % |
+| Strategie | Zeitraum | CAGR | Buy & Hold | Max. DD | DD Buy & Hold | Calmar | B&H |
+|---|---|---|---|---|---|---|---|
+| RSL-Ampel, S&P 500 (Kursindex) | 1970–2026 | 6,81 % | 8,20 % | −34,9 % | −56,1 % | 0,20 | 0,15 |
+| RSL-Ampel, S&P 500 Total Return | 1988–2026 | 9,62 % | 10,77 % | −17,7 % | −53,7 % | 0,54 | 0,20 |
+| RSL-Ampel, DAX | 1988–2026 | 7,73 % | 7,83 % | −28,7 % | −70,0 % | 0,27 | 0,11 |
+| RSL-Ampel, MSCI World (IWDA) | 2009–2026 | 9,08 % | 11,50 % | −24,0 % | −31,4 % | 0,38 | 0,37 |
+| 200-Tage-SMA, Bitcoin (BTC-EUR) | 2015–2026 | 52,68 % | 63,23 % | −68,3 % | −82,7 % | 0,77 | 0,76 |
 
-Lesart: Über sehr lange Zeiträume kostet der Filter **Rendite**, halbiert aber
-den **maximalen Verlust**. Im bulligen MSCI-World-Zeitraum ab 2009 verliert er
-klar – dort gab es kaum Bärenmärkte, die er hätte vermeiden können. Genau das
-ist die ehrliche Antwort, die die Original-Arbeitsmappe schuldig bleibt.
+Lesart: Über lange Zeiträume kostet der Filter **Rendite**, halbiert aber den
+**maximalen Verlust**. Im bulligen MSCI-World-Zeitraum ab 2009 verliert er klar.
+Bei Bitcoin senkt der 200-Tage-Filter den Drawdown deutlich, kostet aber Rendite –
+auch weil kurzfristige Gewinne steuerpflichtig sind, Buy & Hold nach einem Jahr nicht.
+Weitere Zahlen und die Lesart: Anleitung, Kapitel 15.4.
 
 ---
 
@@ -123,40 +130,43 @@ ist die ehrliche Antwort, die die Original-Arbeitsmappe schuldig bleibt.
 
 ### Yahoo Finance (automatisch, ohne Key)
 
-Symbole wie bei Yahoo eingeben:
-
 | Instrument | Symbol |
 |---|---|
-| iShares Core MSCI World (EUR, Amsterdam) | `IWDA.AS` |
-| iShares Core MSCI World (Xetra) | `EUNL.DE` |
+| iShares Core MSCI World (EUR, Amsterdam / Xetra) | `IWDA.AS` / `EUNL.DE` |
 | Vanguard FTSE All-World (Acc) | `VWCE.DE` |
 | iShares Core DAX | `EXS1.DE` |
 | iShares Core S&P 500 (EUR) | `SXR8.DE` |
 | Xetra-Gold | `4GLD.DE` |
 | DAX / MDAX / S&P 500 / Nasdaq 100 | `^GDAXI` / `^MDAXI` / `^GSPC` / `^NDX` |
-| EURO STOXX 50 / Dow Jones | `^STOXX50E` / `^DJI` |
+| S&P 500 mit Dividenden (Total Return, ab 1988) | `^SP500TR` |
+| Bitcoin / Ethereum (EUR) | `BTC-EUR` / `ETH-EUR` |
+| Bitcoin-ETC/-ETN (Xetra) / US-Bitcoin-ETF | `BTCE.DE`, `VBTC.DE` / `IBIT` |
 
-Die Suche im Tool (Lupe) findet Symbole und Namen. Geladene Reihen liegen in
-`data/cache/` und werden automatisch aktualisiert, wenn sie älter als ein paar
-Tage sind. **Adjustierte Kurse** (Dividenden, Splits) werden verwendet.
+Die Suche im Tool (Lupe) findet Symbole und Namen; der Reiter „Daten“ bietet eine
+Schnellwahl. Geladene Reihen liegen in `data/cache/` und werden automatisch
+aktualisiert, wenn sie älter als ein paar Tage sind. **Adjustierte Kurse**
+(Dividenden, Splits) werden verwendet; Kursindizes wie `^GSPC` enthalten dennoch
+keine Dividenden – das Tool weist darauf hin.
+
+### Datenqualität
+
+Jede Reihe wird auf Sprünge (Datenfehler, Währungs-/Splitwechsel), Ausreißer, Lücken
+und eingefrorene Kurse geprüft; echte Crashs in unruhigen Phasen werden davon
+unterschieden. Beispiel: `SXR8.DE` hat am 01.11.2010 einen Datenfehler von −24,6 %.
 
 ### CSV-Import
 
 Funktioniert mit Exporten von **ariva.de, onvista, investing.com, Yahoo** und
-eigenen Dateien. Erkannt werden automatisch:
-
-* Trennzeichen `;`, `,` oder Tab
-* Datumsformate `31.12.2015`, `2015-12-31`, `31/12/2015`, Excel-Serials
-* Dezimalkomma und Tausenderpunkte
-* die richtige Kursspalte (bevorzugt „Schluss“, „Close“, „Adj Close“, „Kurs“)
-
-Vorspann-Zeilen (Fondsinfo, WKN etc.) stören nicht.
+eigenen Dateien. Erkannt werden Trennzeichen (`;`, `,`, Tab), Datumsformate
+(`31.12.2015`, `2015-12-31`, `31/12/2015`, `12/31/2015` – Tag oder Monat zuerst wird
+**je Datei** bestimmt), Excel-Serials, Dezimalkomma und Tausenderpunkte sowie die
+richtige Kursspalte. Vorspann-Zeilen stören nicht.
 
 ### Warum keine direkte Browser-Abfrage?
 
-Yahoo und Stooq senden keine CORS-Header, ein Browser dürfte die Daten nicht
-direkt laden. Deshalb läuft der Download **im lokalen Python-Prozess** – das ist
-auch der Grund für die Architektur „Python + Browser-Oberfläche“.
+Yahoo sendet keine CORS-Header, ein Browser dürfte die Daten nicht direkt laden.
+Deshalb läuft der Download **im lokalen Python-Prozess** – das ist auch der Grund für
+die Architektur „Python + Browser-Oberfläche“.
 
 ---
 
@@ -164,28 +174,23 @@ auch der Grund für die Architektur „Python + Browser-Oberfläche“.
 
 | Feld | Bedeutung | Standard |
 |---|---|---|
-| Risiko-Anlage | ETF/Aktie/Index, der bei „grün“ gehalten wird | `IWDA.AS` |
-| Signalgeber | Index für die Ampel | `^GSPC` |
+| Risiko-Anlage | ETF/Aktie/Index/Krypto, der bei „grün“ gehalten wird | `IWDA.AS` |
+| Signalgeber | Reihe für das Signal | `^GSPC` |
 | Defensiv-Anlage | Kasse (verzinst) oder defensiver ETF | Kasse |
 | Signaltyp | RSL-Ampel, SMA-Trend, Golden Cross, Momentum | RSL-Ampel |
-| Startkapital | | 10.000 € |
-| Ordergebühr | fix je Order | 5,90 € |
-| Gebühr % | prozentual je Order | 0 % |
-| Slippage | Aufschlag/Abschlag je Ausführung | 5 bp |
-| Steuersatz | Abgeltungssteuer inkl. Soli | 26,375 % |
-| Kasse-Zins | Verzinsung der Kasse | 2 % p. a. |
+| Startkapital | | 10.000 |
+| Ordergebühr / Gebühr % | fix bzw. prozentual je Order | 5,90 € / 0 % (Bitcoin-Vorlagen: 0 € / 0,25 %) |
+| Slippage | Auf-/Abschlag je Ausführung | 5 bp (Bitcoin: 15 bp) |
+| Kasse-Zins | Verzinsung der Kasse, auch risikoloser Zins für Sharpe | 2 % p. a. |
 | Ausführung | nächster Schlusskurs (realistisch) / gleicher Schlusskurs (wie Original) | nächster Schlusskurs |
-| Steuer | anteilig (wie Original) / nur bei Verkauf / keine | anteilig |
-| Zeitraum | Start/Ende, leer = alles | – |
+| Steuer-Bewertung | anteilig (wie Original) / nur bei Verkauf / keine | anteilig |
+| Steuerregel | automatisch / Aktienfonds (30 % TF) / Mischfonds (15 %) / ohne TF / §23 | automatisch |
+| Abgeltungsteuer | inkl. Soli | 26,375 % |
+| Sparerpauschbetrag | je Jahr | 1.000 € |
+| Pers. Steuersatz / Freigrenze (§23) | für Bitcoin & Gold-ETCs innerhalb eines Jahres | 35 % / 1.000 € |
+| Zeitraum | Start/Ende, leer = alles ab gültigem Signal | – |
 
-**Steuermodi**
-
-* *anteilig* – täglicher Netto-Liquidationswert: Gebühr und fiktive Steuer auf
-  den unrealisierten Gewinn werden abgezogen. Das ist das Modell der
-  Original-Spalte I und die konservative Sicht.
-* *nur bei Verkauf* – Steuer erst beim tatsächlichen Verkauf (echte
-  Cashflow-Sicht).
-* *keine* – für Vorsteuer-Vergleiche.
+Details zu allen Steuerregeln: Anleitung, Kapitel 8.
 
 ---
 
@@ -193,7 +198,8 @@ auch der Grund für die Architektur „Python + Browser-Oberfläche“.
 
 ```bash
 python ETF_Tool.py --selftest
-python ETF_Tool.py --download IWDA.AS ^GDAXI EXS1.DE
+python ETF_Tool.py --download IWDA.AS ^GDAXI EXS1.DE BTC-EUR
+python ETF_Tool.py --quality SXR8.DE
 python ETF_Tool.py --backtest '{"risk":"IWDA.AS","signal":"^GSPC","signal_type":"ampel"}'
 python ETF_Tool.py --port 9000 --no-browser
 ```
@@ -206,38 +212,36 @@ python ETF_Tool.py --port 9000 --no-browser
 |---|---|
 | `ETF_Tool.py` | das komplette Werkzeug (Server, Engine, Oberfläche) – **die einzige Datei, die Sie brauchen** |
 | `Start_ETF_Tool.bat` | Start per Doppelklick unter Windows |
-| `README_ETF_Tool.md` | Projektüberblick, Architektur, Verifikation, Grenzen |
-| `Anleitung.md` | ausführliches Benutzerhandbuch: Bedienung, alle Reiter, Parameter, Datenpflege, Fehlerbehebung |
+| `README_ETF_Tool.md` | dieser Projektüberblick |
+| `Anleitung.md` (= `README.md`) | ausführliches Benutzerhandbuch |
 | `Analyse_ETF_Simulation_Original.md` | Reverse-Engineering der Original-Arbeitsmappe |
-| `data/cache/*.json` | heruntergeladene Kursreihen (wird automatisch angelegt) |
-| `data/index.json` | Verzeichnis der geladenen Instrumente |
-| `tool_src/`, `build_tool.py` | Quellteile und Build-Skript (nur für Entwicklung) |
+| `data/cache/*.json`, `data/index.json` | geladene Kursreihen und ihr Verzeichnis |
+| `tool_src/engine.py`, `data.py`, `server.py`, `ui/` | Quellteile |
+| `build_tool.py` | baut `ETF_Tool.py` aus den Quellteilen (prüft dabei auf Namenskonflikte) |
+| `tool_src/validate_engine.py`, `api_test.py`, `make_numbers.py` | Validierung, End-to-End-Test, Doku-Zahlen |
 
-Die Oberfläche ist in `ETF_Tool.py` eingebettet (zlib+Base64). Wer sie ändern
-will: `tool_src/ui/` bearbeiten und `python build_tool.py` ausführen.
+Die Oberfläche ist in `ETF_Tool.py` eingebettet (zlib+Base64). Wer etwas ändern
+will: `tool_src/` bearbeiten und `python build_tool.py` ausführen.
 
 ---
 
 ## 9. Grenzen und Ehrlichkeit
 
 * **Keine Anlageberatung.** Historische Simulationen sind keine Prognose.
-* **Survivorship-/Auswahl-Bias:** Wer heute einen ETF auswählt, weiß, dass er
-  überlebt hat. Die getestete Rendite ist dadurch eher zu hoch.
-* **Yahoo-Daten** sind gut, aber nicht fehlerfrei (Split-/Dividendenkorrekturen,
-  Lücken, gelegentlich falsche Schlusskurse). Für ernsthafte Arbeit:
-  CSV-Import aus einer geprüften Quelle.
-* **Steuer** ist stark vereinfacht (kein Verlusttopf über Jahre, keine
-  Teilfreistellung, keine Sparerpauschbeträge, keine Kirchensteuer).
-* **Kein Intraday, keine Limit-Orders, keine Liquiditätsprüfung.** Gehandelt
-  wird zum Schlusskurs mit Aufschlag.
-* **Parameter-Suche** neigt zur Überanpassung. Deshalb gibt es den
-  Walk-Forward-Test: nur dessen Out-of-Sample-Ergebnis ist eine ehrliche
-  Schätzung.
-* Der **Original-Nachbau** ist eine Annäherung: Hebel und Short werden
-  synthetisch aus dem DAX mit Finanzierungskosten gebildet, die Monatsrotation
-  folgt der Variante D der Arbeitsmappe. Deshalb weicht das Endkapital vom
-  Original ab (31,6 % statt 47,5 % p. a.) – die Originalzahlen beruhen auf
-  idealisierten ETF-Reihen ohne Hebelkosten.
+* **Survivorship-/Auswahl-Bias:** Wer heute einen ETF oder Bitcoin auswählt, weiß,
+  dass er überlebt hat. Die getestete Rendite ist dadurch eher zu hoch.
+* **Yahoo-Daten** sind gut, aber nicht fehlerfrei – die Qualitätsprüfung findet die
+  typischen Fehler, ersetzt aber keinen Blick auf den Kursverlauf.
+* **Steuer** ist vereinfacht: keine Vorabpauschale, kein getrennter Aktien-Verlusttopf,
+  Kirchensteuer nur über den Steuersatz; die automatische Steuerregel ist eine Näherung.
+* **Kasse** mit konstantem Zins, **keine Währungsumrechnung** (Ergebnisse in der Währung
+  der Risiko-Anlage), kein Intraday, keine Limit-Orders.
+* **Parameter-Suche** neigt zur Überanpassung. Nur das Out-of-Sample-Ergebnis des
+  Walk-Forward-Tests ist eine ehrliche Schätzung.
+* Der **Original-Nachbau** ist eine Annäherung: Hebel und Short werden synthetisch aus
+  dem DAX mit Finanzierung und Kosten gebildet (Abweichung zum echten LevDAX 2010–2026:
+  0,9 Prozentpunkte p. a.). Er erreicht 35,4 % statt 47,5 % p. a. – die Originalzahlen
+  beruhen auf idealisierten Reihen ohne Finanzierungskosten.
 
 ---
 
@@ -249,19 +253,24 @@ will: `tool_src/ui/` bearbeiten und `python build_tool.py` ausführen.
 | Download schlägt fehl | Symbol prüfen (Yahoo-Suche), Firewall/Proxy, später erneut versuchen |
 | Browser öffnet nicht | URL aus der Konsole manuell aufrufen |
 | Port belegt | `--port 9000` verwenden (freier Port wird sonst automatisch gesucht) |
-| „Zu wenige Kurstage“ | Zeitraum größer wählen oder Instrument mit längerer Historie |
-| Diagramme leer | Fenster breiter ziehen (Neuzeichnen bei Größenänderung) |
+| Start später als eingestellt | Signal-Vorlauf: der Test beginnt erst mit gültigem Signal |
+| Gelbe Hinweisbox | Datenfehler im Zeitraum – Zeitraum danach wählen |
 
 ---
 
 ## 11. Verifikation
 
-Die Engine wurde gegen die Original-Arbeitsmappe geprüft (siehe
-`Analyse_ETF_Simulation_Original.md`, Abschnitt 5):
-
-* Signal-Logik: **14.453 Tage, 0 Abweichungen**
+* Signal-Logik gegen die Arbeitsmappe: **14.453 Tage, 0 Abweichungen**
 * Kontoführung (Wert vor/nach Steuern): **598 Zeilen, 0 Abweichungen**
-* Invarianten: Buy & Hold ohne Kosten exakt, Gebühren exakt, Steuer exakt,
-  Jahresrenditen verkettet = Gesamtrendite
+* Synthetischer 2x-DAX gegen echten LevDAX (DBPE.DE): 11,9 % vs. 12,8 % p. a.
+* **27 Regressionstests** der Rechenregeln (`python ETF_Tool.py --selftest`), u. a.
+  Buy & Hold exakt, Gebühren exakt, Steuer 263,75 € auf 1.000 € Gewinn (wie Original),
+  Teilfreistellung, Pauschbetrag, Verlusttopf, §23, Strategie = Buy & Hold bei „immer
+  investiert“ in allen Steuermodi, Jahres-/Monatskette = Gesamtrendite, Kassezins
+  2,00 % bei Börsen- und Krypto-Kalender, Sharpe/Sortino gegen Handrechnung
+* End-to-End-Test der Programmschnittstelle (`tool_src/api_test.py`)
 
-`python ETF_Tool.py --selftest` führt einen schnellen Funktionstest aus.
+Version 1.1 behebt mehrere Rechenfehler der Version 1.0 (u. a. Benchmark im Steuermodus
+„nur bei Verkauf“, Finanzierung synthetischer Short-Produkte, unvollständiges
+Walk-Forward-Raster, Sharpe/Sortino, CSV-Datumsformat, 252-Tage-Annahme bei Krypto).
+Vollständige Liste mit Auswirkungen: Anleitung, Kapitel 15.2.

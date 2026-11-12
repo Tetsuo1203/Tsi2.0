@@ -22,7 +22,7 @@
     </svg>
     <div>
       <div class="brand-name">ETF-Timing-Studio</div>
-      <div class="brand-sub">Trendfolge-Analyse für Aktien &amp; ETFs · Nachbau von ETF_Simulation.xlsm</div>
+      <div class="brand-sub">Trendfolge-Analyse für Aktien, ETFs &amp; Krypto · Nachbau von ETF_Simulation.xlsm</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -108,11 +108,10 @@
     <section class="panel">
       <div class="panel-title">Ausführung &amp; Kosten</div>
       <div class="grid2">
-        <div><label class="lbl">Startkapital €</label><input id="capital" class="inp num" type="number" step="1000"></div>
-        <div><label class="lbl">Ordergebühr €</label><input id="feeFixed" class="inp num" type="number" step="0.1"></div>
+        <div><label class="lbl">Startkapital</label><input id="capital" class="inp num" type="number" step="1000"></div>
+        <div><label class="lbl">Ordergebühr fix</label><input id="feeFixed" class="inp num" type="number" step="0.1"></div>
         <div><label class="lbl">Gebühr %</label><input id="feePct" class="inp num" type="number" step="0.05"></div>
         <div><label class="lbl">Slippage bp</label><input id="slippage" class="inp num" type="number" step="1"></div>
-        <div><label class="lbl">Steuersatz %</label><input id="taxRate" class="inp num" type="number" step="0.1"></div>
         <div><label class="lbl">Kasse-Zins % p.a.</label><input id="cashRate" class="inp num" type="number" step="0.1"></div>
       </div>
       <div class="field">
@@ -123,20 +122,36 @@
         </select>
       </div>
       <div class="field">
-        <label class="lbl" for="taxMode">Steuer</label>
+        <div class="grid2">
+          <div><label class="lbl">Startdatum</label><input id="startDate" class="inp" type="date"></div>
+          <div><label class="lbl">Enddatum</label><input id="endDate" class="inp" type="date"></div>
+        </div>
+        <div class="hint">Leer = gesamter verfügbarer Zeitraum (ab gültigem Signal).</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">Steuer (Privatanleger DE)</div>
+      <div class="field">
+        <label class="lbl" for="taxMode">Bewertung</label>
         <select id="taxMode" class="inp">
-          <option value="accrued">anteilig (Wert nach Steuern, wie Original)</option>
+          <option value="accrued">anteilig: Wert nach Steuer (wie Original)</option>
           <option value="realized">nur bei Verkauf</option>
           <option value="none">keine Steuer</option>
         </select>
       </div>
       <div class="field">
-        <div class="grid2">
-          <div><label class="lbl">Startdatum</label><input id="startDate" class="inp" type="date"></div>
-          <div><label class="lbl">Enddatum</label><input id="endDate" class="inp" type="date"></div>
-        </div>
-        <div class="hint">Leer = gesamter verfügbarer Zeitraum.</div>
+        <label class="lbl" for="taxRule">Steuerregel</label>
+        <select id="taxRule" class="inp"></select>
       </div>
+      <div class="grid2" style="margin-top:8px">
+        <div><label class="lbl">Abgeltungsteuer %</label><input id="taxRate" class="inp num" type="number" step="0.1"></div>
+        <div><label class="lbl">Sparerpauschbetrag/J.</label><input id="taxAllowance" class="inp num" type="number" step="100"></div>
+        <div><label class="lbl">Pers. Steuersatz % (§23)</label><input id="taxPrivate" class="inp num" type="number" step="1"></div>
+        <div><label class="lbl">Freigrenze §23/J.</label><input id="taxExemption" class="inp num" type="number" step="100"></div>
+      </div>
+      <div class="hint">Automatisch: Aktien-ETF 30 % Teilfreistellung · Anleihe-ETF/Aktie ohne ·
+        Bitcoin/Gold-ETC nach 1 Jahr steuerfrei (§23), sonst pers. Steuersatz.</div>
     </section>
 
     <section class="panel actions">
@@ -162,6 +177,7 @@
 
     <div class="views">
       <div class="view active" id="view-overview">
+        <div id="noticeBox" class="notices"></div>
         <div id="kpiRow" class="kpi-row"></div>
         <div class="panel chart-panel">
           <div class="panel-head">
@@ -225,6 +241,23 @@
           <div class="panel-head"><div class="panel-title">Monatsrenditen der Strategie</div></div>
           <div id="heatMonths" class="heat"></div>
         </div>
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <div class="panel-title">Rollierende Renditen p. a. – wie oft lag man vorn?</div>
+            <div class="panel-tools">
+              <select id="rollH" class="inp mini">
+                <option value="1">Anlagedauer 1 Jahr</option>
+                <option value="3" selected>Anlagedauer 3 Jahre</option>
+                <option value="5">Anlagedauer 5 Jahre</option>
+              </select>
+              <span class="legend" id="legendRoll"></span>
+            </div>
+          </div>
+          <div id="chartRoll" class="chart small"></div>
+          <div id="rollTable" class="table-wrap" style="margin-top:10px"></div>
+          <div class="hint">Jeder Punkt: annualisierte Rendite, wenn man N Jahre vorher eingestiegen wäre
+            (überlappende Zeiträume). Zeigt, wie stark das Ergebnis vom Einstiegszeitpunkt abhängt.</div>
+        </div>
         <div class="panel">
           <div class="panel-head"><div class="panel-title">Jahresübersicht</div></div>
           <div id="yearTable" class="table-wrap"></div>
@@ -267,7 +300,14 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Parameter-Suche</div>
-            <div class="panel-tools muted">Ziel: Calmar-Ratio (Rendite je Risiko)</div>
+            <div class="panel-tools">
+              <select id="gridObj" class="inp mini" title="Sortierung und Farbe der Matrix">
+                <option value="calmar">Ziel: Calmar (Rendite je max. Verlust)</option>
+                <option value="martin">Ziel: Martin (Rendite je Ulcer-Index)</option>
+                <option value="sharpe">Ziel: Sharpe</option>
+                <option value="cagr">Ziel: CAGR</option>
+              </select>
+            </div>
           </div>
           <div id="gridSummary" class="hint">Noch keine Suche gestartet.</div>
           <div id="chartGrid" class="chart small"></div>
@@ -282,23 +322,26 @@
             <div class="panel-tools">
               <select id="wfObj" class="inp mini">
                 <option value="calmar">Ziel: Calmar</option>
+                <option value="martin">Ziel: Martin (Ulcer)</option>
                 <option value="cagr">Ziel: CAGR</option>
                 <option value="sharpe">Ziel: Sharpe</option>
               </select>
               <button class="btn" id="btnWf2">Start</button>
             </div>
           </div>
-          <div class="hint">Trainingsfenster 6 Jahre, Testfenster 2 Jahre. Die Testphasen ergeben zusammen
-            eine echte Out-of-Sample-Kurve.</div>
+          <div class="hint">Trainingsfenster 6 Jahre, Testfenster 2 Jahre, volles Parameterraster. Die
+            Testphasen laufen als eine durchgehende Simulation (Out-of-Sample) – Buy &amp; Hold über
+            denselben Zeitraum zum Vergleich. Bei 50+ Jahren Historie bis ca. 30 Sekunden.</div>
           <div id="wfOut"></div>
           <div id="chartWf" class="chart small"></div>
           <div id="wfTable" class="table-wrap"></div>
         </div>
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title">Monte-Carlo-Projektion (Bootstrapping der Tagesrenditen)</div>
+            <div class="panel-title">Monte-Carlo-Projektion (Block-Bootstrap, 10 Jahre)</div>
             <div class="panel-tools"><button class="btn" id="btnMc">Projektion starten</button></div>
           </div>
+          <div id="mcKpi" class="kpi-row small"></div>
           <div id="chartMc" class="chart small"></div>
           <div id="mcOut" class="hint"></div>
         </div>
@@ -326,7 +369,8 @@
             <button class="btn primary" id="btnDownload">Laden</button>
           </div>
           <div class="hint">Yahoo-Symbole: ETFs mit Börsenkürzel (IWDA.AS, EXS1.DE, SXR8.DE),
-            Indizes mit ^ (^GDAXI, ^GSPC, ^NDX).</div>
+            Indizes mit ^ (^GDAXI, ^GSPC, ^SP500TR), Krypto mit Währung (BTC-EUR, ETH-EUR).</div>
+          <div id="suggestBox" class="chips"></div>
           <div id="dlOut" class="hint"></div>
         </div>
         <div class="panel">
@@ -336,7 +380,8 @@
             <input id="impFile" type="file" accept=".csv,.txt" class="inp file">
           </div>
           <div class="hint">Funktioniert mit ariva.de, onvista, investing.com, Yahoo-CSV und eigenen
-            Dateien: Datum + Kurs werden automatisch erkannt (Semikolon/Komma/Tab).</div>
+            Dateien: Datum + Kurs, Datumsformat (TT/MM oder MM/TT) und Dezimalzeichen werden je Datei
+            erkannt (Semikolon/Komma/Tab).</div>
           <div id="impOut" class="hint"></div>
         </div>
       </div>

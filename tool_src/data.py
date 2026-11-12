@@ -19,7 +19,7 @@ import urllib.request
 from datetime import date, datetime, timedelta
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from engine import Series, fnum, make_series, pdate
+from engine import Series, fnum, make_series, pdate, quality_report
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
@@ -97,10 +97,9 @@ def yahoo_search(query: str, limit: int = 12) -> List[Dict]:
 
 def yahoo_series(symbol: str, start: Optional[date] = None, end: Optional[date] = None,
                  interval: str = "1d") -> Series:
-    p1 = int((start or date(1950, 1, 1)).strftime("%s")) if False else int(
-        (datetime.combine(start, datetime.min.time()) - datetime(1970, 1, 1)).days * 86400) if start else 0
-    p2 = int((datetime.combine(end, datetime.min.time()) - datetime(1970, 1, 1)).days * 86400) \
-        if end else int(time.time()) + 86400
+    epoch = date(1970, 1, 1)
+    p1 = (start - epoch).days * 86400 if start else 0
+    p2 = ((end - epoch).days + 1) * 86400 if end else int(time.time()) + 86400
     j = _yahoo("v8/finance/chart/" + urllib.parse.quote(symbol), {
         "period1": p1, "period2": p2, "interval": interval,
         "events": "div%2Csplit", "includeAdjustedClose": "true"})
@@ -116,25 +115,30 @@ def yahoo_series(symbol: str, start: Optional[date] = None, end: Optional[date] 
     adj = ((r.get("indicators", {}).get("adjclose") or [{}])[0] or {}).get("adjclose")
     if not adj:
         adj = closes
-    rows = []
+    # Zeitstempel = Handelsbeginn in UTC; mit dem Börsen-Offset ergibt sich der lokale
+    # Handelstag (wichtig z. B. für Asien/Australien). Doppelte Tage: letzter Wert gilt.
+    off = int(meta.get("gmtoffset") or 0)
+    by_day: Dict[date, Tuple[float, Optional[float]]] = {}
     for i, t in enumerate(ts):
-        d = datetime.utcfromtimestamp(t).date()
+        if t is None:
+            continue
+        d = (datetime(1970, 1, 1) + timedelta(seconds=int(t) + off)).date()
         c = fnum(closes[i]) if i < len(closes) else None
         a = fnum(adj[i]) if i < len(adj) else None
-        if c is None:
+        if c is None or c <= 0:
             continue
-        rows.append((d, c, a))
-    if not rows:
+        by_day[d] = (c, a if a is not None and a > 0 else None)
+    if not by_day:
         raise RuntimeError(f"Keine gültigen Kurse für {symbol}")
-    rows.sort(key=lambda x: x[0])
+    days = sorted(by_day)
     series = Series(symbol=symbol, name=meta.get("longName") or meta.get("shortName") or symbol,
                     currency=meta.get("currency") or "",
                     source="yahoo", meta={"exchange": meta.get("fullExchangeName") or meta.get("exchangeName") or "",
                                           "type": meta.get("instrumentType") or "",
                                           "timezone": meta.get("exchangeTimezoneName") or "",
                                           "fetched": datetime.now().isoformat(timespec="seconds")},
-                    dates=[r[0] for r in rows], close=[r[1] for r in rows],
-                    adj=[r[2] if r[2] is not None else r[1] for r in rows])
+                    dates=days, close=[by_day[d][0] for d in days],
+                    adj=[by_day[d][1] if by_day[d][1] is not None else by_day[d][0] for d in days])
     return series
 
 
@@ -165,8 +169,65 @@ def _guess_delim(text: str) -> str:
     return best
 
 
+def _detect_dayfirst(samples: List[str]) -> Optional[bool]:
+    """TT/MM vs. MM/TT einer Datumsspalte anhand der Werte > 12 (None = nicht entscheidbar)."""
+    dmy = mdy = 0
+    for raw in samples:
+        t = (raw or "").strip().strip('"').strip("'").split("T")[0].split(" ")[0]
+        m = re.fullmatch(r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})", t)
+        if not m:
+            continue
+        a, b = int(m.group(1)), int(m.group(2))
+        if a > 12 >= b:
+            dmy += 1
+        elif b > 12 >= a:
+            mdy += 1
+    if dmy > mdy:
+        return True
+    if mdy > dmy:
+        return False
+    return None
+
+
+def _detect_decimal(samples: List[str]) -> Optional[str]:
+    """Dezimaltrennzeichen einer Zahlenspalte ("," oder "."; None = je Wert entscheiden).
+
+    Eindeutig sind Werte mit beiden Zeichen oder mit 1-2/4+ Nachkommastellen; "1.234" allein
+    ist mehrdeutig und zählt nicht.
+    """
+    comma = dot = 0
+    for raw in samples:
+        t = re.sub(r"[^\d,.\-]", "", raw or "")
+        if not t:
+            continue
+        lc, ld = t.rfind(","), t.rfind(".")
+        if lc > ld and (ld >= 0 or len(t) - lc - 1 != 3):
+            comma += 1
+        elif ld > lc and (lc >= 0 or len(t) - ld - 1 != 3):
+            dot += 1
+    if comma > dot:
+        return ","
+    if dot > comma:
+        return "."
+    return None
+
+
+def _parse_pairs(raw: List[Tuple[str, str]]):
+    """Datum/Kurs-Paare einheitlich je Spalte auswerten (kein Mischen von TT/MM und MM/TT)."""
+    dayfirst = _detect_dayfirst([d for d, _ in raw])
+    dec = _detect_decimal([p for _, p in raw])
+    rows: List[Tuple[date, float]] = []
+    for ds, ps in raw:
+        d = pdate(ds, dayfirst=dayfirst)
+        v = fnum(ps, decimal=dec)
+        if d and v and v > 0:
+            rows.append((d, v))
+    return rows, dayfirst, dec
+
+
 def parse_csv(text: str, symbol: str = "", name: str = "") -> Series:
-    """Flexibler CSV-Parser: erkennt Trennzeichen, Kopfzeilen, Datums- und Kurs-Spalte."""
+    """Flexibler CSV-Parser: erkennt Trennzeichen, Kopfzeilen, Datums- und Kurs-Spalte,
+    Datumsformat (TT/MM oder MM/TT) und Dezimaltrennzeichen je Datei."""
     if isinstance(text, bytes):
         text = text.decode("utf-8-sig", "replace")
     text = text.replace("\ufeff", "")
@@ -201,35 +262,34 @@ def parse_csv(text: str, symbol: str = "", name: str = "") -> Series:
             break
 
     rows: List[Tuple[date, float]] = []
+    dayfirst, dec = None, None
     if date_col is not None:
+        raw = []
         for line in lines[header_idx + 1:]:
             cells = _split(line, delim)
-            if len(cells) <= max(date_col, price_col):
-                continue
-            d = pdate(cells[date_col])
-            v = fnum(cells[price_col])
-            if d and v and v > 0:
-                rows.append((d, v))
+            if len(cells) > max(date_col, price_col):
+                raw.append((cells[date_col], cells[price_col]))
+        rows, dayfirst, dec = _parse_pairs(raw)
     if len(rows) < 10:
         # Fallback: erste Spalte = Datum, erste sinnvolle Zahlspalte = Kurs
-        rows = []
+        raw = []
         for line in lines:
             cells = _split(line, delim)
-            if len(cells) < 2:
-                continue
-            d = pdate(cells[0])
-            if not d:
+            if len(cells) < 2 or not pdate(cells[0]):
                 continue
             for c in cells[1:]:
                 v = fnum(c)
                 if v and v > 0:
-                    rows.append((d, v))
+                    raw.append((cells[0], c))
                     break
+        rows, dayfirst, dec = _parse_pairs(raw)
     if len(rows) < 10:
         raise ValueError("Konnte im CSV keine Kursreihe erkennen (Datum + Kurs erwartet).")
     sym = symbol or (name or "CSV").upper().replace(" ", "_")[:24]
+    fmt = {True: "TT/MM/JJJJ", False: "MM/TT/JJJJ", None: "eindeutig"}[dayfirst]
     series = make_series(sym, rows, name=name or sym, currency="", source="csv",
-                         meta={"fetched": datetime.now().isoformat(timespec="seconds")})
+                         meta={"fetched": datetime.now().isoformat(timespec="seconds"),
+                               "csv_date_order": fmt, "csv_decimal": dec or "auto"})
     return series
 
 
@@ -239,18 +299,25 @@ def parse_csv(text: str, symbol: str = "", name: str = "") -> Series:
 
 def synthetic_leverage(base: Series, factor: float, rf_pct: float = 0.0,
                        spread_pct: float = 0.0, name: str = "") -> Series:
-    """Bildet eine gehebelte Reihe aus Tagesrenditen nach: r_L = L*r - |L-1|*Kosten.
+    """Bildet eine täglich gehebelte Long-/Short-Reihe aus Tagesrenditen nach:
 
-    Entspricht der Logik aus 'db_x-trackers' (dort: Faktor 1 / 2 / -1 / -2 auf den DAX).
+        r_L = L·r + (1 − L)·rf·Δt − |L|·Kosten·Δt        (Δt in Kalenderjahren)
+
+    Long-Hebel (L > 1) zahlt Finanzierung auf den geliehenen Teil (L − 1); Short-Produkte
+    (L < 0) erhalten Zinsen auf Sicherheit und Leerverkaufserlös (1 − L). Laufende Kosten
+    (Swap/TER) skalieren mit dem Exposure |L|. Ohne Zins/Kosten entspricht das der Logik
+    aus 'db_x-trackers' (Faktor 1 / 2 / -1 / -2 auf den DAX).
     """
     if not base.dates:
         raise ValueError("Basisserie ist leer.")
-    cost_daily = (rf_pct + spread_pct) / 100.0 / 252.0
+    rf, cost = rf_pct / 100.0, spread_pct / 100.0
     vals = [100.0]
     for i in range(1, len(base)):
-        r = base.value_at(i) / base.value_at(i - 1) - 1.0 if base.value_at(i - 1) else 0.0
-        r_l = factor * r - abs(factor - 1.0) * cost_daily
-        vals.append(vals[-1] * (1.0 + r_l))
+        prev = base.value_at(i - 1)
+        r = base.value_at(i) / prev - 1.0 if prev else 0.0
+        dt = (base.dates[i] - base.dates[i - 1]).days / 365.0
+        r_l = factor * r + (1.0 - factor) * rf * dt - abs(factor) * cost * dt
+        vals.append(max(vals[-1] * (1.0 + r_l), 1e-6))
     sym = f"{base.symbol}_{factor:+.0f}x".replace("+", "L")
     return Series(symbol=sym, name=name or f"{base.name or base.symbol} ({factor:+.0f}x synthetisch)",
                   currency=base.currency, source="synthetic",
@@ -298,14 +365,30 @@ def save_series(s: Series) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(s.to_dict(), f, ensure_ascii=False, separators=(",", ":"))
     os.replace(tmp, path)
+    try:
+        q = quality_report(s, check_age=False)
+        qsum = {"level": q["level"], "n_warn": q["n_warn"], "n_info": q["n_info"]}
+    except Exception:                                           # noqa: BLE001
+        qsum = None
     idx = load_index()
     idx.setdefault("instruments", {})[s.symbol] = {
         "symbol": s.symbol, "name": s.name, "currency": s.currency, "source": s.source,
         "rows": len(s), "first": s.dates[0].isoformat() if s.dates else None,
         "last": s.dates[-1].isoformat() if s.dates else None,
-        "meta": s.meta,
+        "meta": s.meta, "quality": qsum,
         "updated": datetime.now().isoformat(timespec="seconds"),
     }
+    save_index(idx)
+
+
+def update_quality(symbol: str, rep: Dict) -> None:
+    """Qualitäts-Kurzinfo im Verzeichnis nach einer manuellen Prüfung aktualisieren."""
+    idx = load_index()
+    entry = idx.get("instruments", {}).get(symbol)
+    if entry is None:
+        return
+    entry["quality"] = {"level": rep.get("level"), "n_warn": rep.get("n_warn", 0),
+                        "n_info": rep.get("n_info", 0)}
     save_index(idx)
 
 
@@ -338,8 +421,28 @@ def delete_series(symbol: str) -> bool:
 
 
 def list_cached() -> List[Dict]:
-    idx = load_index().get("instruments", {})
-    out = list(idx.values())
+    """Verzeichnis der geladenen Reihen; fehlende Qualitätsinfos (Bestände aus Version 1.0)
+    werden einmalig nachgetragen."""
+    idx = load_index()
+    inst = idx.get("instruments", {})
+    changed = False
+    for sym, entry in inst.items():
+        if "quality" in entry:
+            continue
+        s = load_series(sym)
+        try:
+            q = quality_report(s, check_age=False) if s is not None and len(s) else None
+            entry["quality"] = ({"level": q["level"], "n_warn": q["n_warn"], "n_info": q["n_info"]}
+                                if q else None)
+        except Exception:                                       # noqa: BLE001
+            entry["quality"] = None
+        changed = True
+    if changed:
+        try:
+            save_index(idx)
+        except Exception:                                       # noqa: BLE001
+            pass
+    out = list(inst.values())
     out.sort(key=lambda x: (x.get("name") or x.get("symbol") or "").lower())
     return out
 
@@ -409,6 +512,52 @@ PRESET_INSTRUMENTS = [
     {"symbol": "^NDX", "name": "Nasdaq 100 Index", "group": "Index", "type": "Index"},
     {"symbol": "^STOXX50E", "name": "EURO STOXX 50 Index", "group": "Index", "type": "Index"},
     {"symbol": "^DJI", "name": "Dow Jones Industrial Average", "group": "Index", "type": "Index"},
+    {"symbol": "^SP500TR", "name": "S&P 500 Total Return (mit Dividenden, USD, ab 1988)", "group": "Index", "type": "Index"},
     {"symbol": "URTH", "name": "iShares MSCI World ETF (USD)", "group": "Welt-ETF", "type": "ETF"},
     {"symbol": "SPY", "name": "SPDR S&P 500 ETF Trust (USD)", "group": "USA", "type": "ETF"},
+    {"symbol": "BTC-EUR", "name": "Bitcoin in Euro (ab 2014, 7 Tage/Woche)", "group": "Krypto", "type": "Krypto"},
+    {"symbol": "BTC-USD", "name": "Bitcoin in US-Dollar (ab 2014)", "group": "Krypto", "type": "Krypto"},
+    {"symbol": "ETH-EUR", "name": "Ethereum in Euro (ab 2017)", "group": "Krypto", "type": "Krypto"},
+    {"symbol": "BTCE.DE", "name": "Bitwise Physical Bitcoin ETC (Xetra, EUR, ab 2020)", "group": "Krypto", "type": "ETC"},
+    {"symbol": "VBTC.DE", "name": "VanEck Bitcoin ETN (Xetra, EUR, ab 2020)", "group": "Krypto", "type": "ETN"},
+    {"symbol": "IBIT", "name": "iShares Bitcoin Trust ETF (USD, ab 2024)", "group": "Krypto", "type": "ETF"},
 ]
+
+
+# --------------------------------------------------------------------------- #
+# Selbsttest der Datenschicht (ohne Internet)
+# --------------------------------------------------------------------------- #
+
+def data_self_checks() -> List[Dict]:
+    res: List[Dict] = []
+
+    def check(name: str, cond: bool, detail: str = "") -> None:
+        res.append({"name": name, "ok": bool(cond), "detail": detail})
+
+    try:
+        d0 = date(2015, 1, 1)
+        days = [d0 + timedelta(days=i) for i in range(60)]
+        s1 = parse_csv("\n".join(["Datum;Schluss"] + [f"{d.strftime('%d/%m/%Y')};{100 + i},50"
+                                                      for i, d in enumerate(days)]), symbol="A")
+        s2 = parse_csv("\n".join(["Date,Close"] + [f"{d.strftime('%m/%d/%Y')},{1000 + i}.25"
+                                                   for i, d in enumerate(days)]), symbol="B")
+        s3 = parse_csv("\n".join(["Datum;Kurs"] + [f"{d.strftime('%d.%m.%Y')};"
+                                                   f"{'1.234' if i % 2 else '1.234,50'}"
+                                                   for i, d in enumerate(days[:30])]), symbol="C")
+        ok = (s1.dates == days and abs(s1.close[0] - 100.5) < 1e-9 and s2.dates == days
+              and abs(s2.close[0] - 1000.25) < 1e-9 and all(1233.9 < v < 1234.6 for v in s3.close))
+        check("CSV: TT/MM/JJJJ, MM/TT/JJJJ und Tausenderpunkte je Datei korrekt", ok,
+              f"{s1.dates[0]} … {s1.dates[-1]} / {s2.dates[0]} / {s3.close[:2]}")
+    except Exception as e:                                      # noqa: BLE001
+        check("CSV-Import", False, f"Ausnahme {type(e).__name__}: {e}")
+    try:
+        ds = [date(2020, 1, 1) + timedelta(days=i) for i in range(366)]
+        flat = Series("B", ds, [100.0] * 366, [100.0] * 366)
+        g_short = synthetic_leverage(flat, -1.0, rf_pct=2.0, spread_pct=0.3).close[-1] / 100.0 - 1.0
+        g_long = synthetic_leverage(flat, 2.0, rf_pct=2.0, spread_pct=0.3).close[-1] / 100.0 - 1.0
+        check("Synthetischer Hebel: Short erhält Zinsen, Long zahlt Finanzierung",
+              0.036 < g_short < 0.039 and -0.027 < g_long < -0.025,
+              f"-1x: {g_short * 100:+.2f} % p. a., 2x: {g_long * 100:+.2f} % p. a. (Index unverändert)")
+    except Exception as e:                                      # noqa: BLE001
+        check("Synthetischer Hebel", False, f"Ausnahme {type(e).__name__}: {e}")
+    return res
